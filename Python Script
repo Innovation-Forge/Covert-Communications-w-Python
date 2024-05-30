@@ -1,0 +1,91 @@
+from PIL import Image  # Import the Image module from the PIL package to work with images
+
+# A dictionary mapping binary codes to messages for covert communication
+# Each binary code is a key, and its corresponding message is the value
+code_book = {
+    "000": "Dead Drop",
+    "001": "Corner of Lexington Ave and E 48th Street",
+    "010": "Corner of Madison Ave and E 34th Street",
+    "011": "Drop Package in Potted Plant outside Wells Fargo",
+    "100": "Drop Package in Gold Garbage Can",
+    "101": "12 PM Sharp",
+    "110": "7 AM Sharp",
+    "111": "Abort if you see a Red Rose"
+}
+
+# A function to embed a message (using a code from the code book) into an image
+def embed_message(img_path, message_code):
+    try:
+        # Opens the image file from the given path and loads it into the 'img' variable
+        img = Image.open(img_path)  
+        # Accesses the pixel data of the image, allowing us to read and modify pixels
+        pix = img.load()  
+        
+        # Converts the message code (binary string) into an 8-bit binary representation
+        # This is needed to work with the binary data directly
+        binary_message = format(int(message_code, 2), '08b')
+        
+        # Counter to track our position in the binary message as we embed it into the image
+        idx = 0  
+        
+        # Loop through each row of pixels in the image
+        for y in range(img.size[1]):
+            # Loop through each pixel in the current row
+            for x in range(img.size[0]):
+                # Check if there are still bits left in the message to embed
+                if idx < len(binary_message):
+                    # Fetch the current pixel's color values (RGB)
+                    pixel = pix[x, y]
+                    new_pixel = []  # A list to hold the new, modified color values
+                    
+                    # Loop through each color component (R, G, B) of the current pixel
+                    for i in range(3):  
+                        # We use the blue component (i == 2) to hide our message
+                        if i == 2:
+                            # If the current bit of our message is '0', we set the LSB of the blue component to 0
+                            if binary_message[idx] == '0':
+                                new_pixel.append(pixel[i] & 0b11111110)  # Bitwise AND to clear the LSB
+                            else:
+                                # Otherwise, we set the LSB of the blue component to 1
+                                new_pixel.append(pixel[i] | 0b00000001)  # Bitwise OR to set the LSB
+                            idx += 1  # Move to the next bit in the message
+                        else:
+                            # For R and G components, we just copy them as they are
+                            new_pixel.append(pixel[i])
+                    # Update the pixel with new color values, embedding part of the message
+                    pix[x, y] = tuple(new_pixel)  
+                else:
+                    # If all bits of the message have been embedded, stop modifying pixels
+                    break
+        
+        # Save the image with the embedded message to a new file
+        img.save('hidden_message_image.bmp')
+        # Print a success message to the console
+        print("Message embedded successfully. Image saved as 'hidden_message_image.bmp'.")
+    except Exception as e:
+        # If an error occurs during the process, print the error message
+        print(f"Failed to embed message: {str(e)}")
+
+# The main function where the script starts executing
+def main():
+    # Specify the image file to use. It must be in the same directory as the script
+    img_path = 'monalisa.bmp'
+    
+    # Inform the user which image file is being used
+    print("Using image file:", img_path)
+    
+    # Display available messages from the code book to the user
+    print("Please select a message code from the following code book to embed:")
+    for code, message in code_book.items():
+        print(f"{code}: {message}")
+    
+    # Ask the user to choose one of the message codes
+    message_code = input("Enter the message code to embed: ").strip()
+    
+    # Call the embed_message function to embed the chosen message into the image
+    embed_message(img_path, message_code)
+
+# This line checks if the script is being run directly (not imported as a module)
+# If true, it calls the main function to start the script
+if __name__ == "__main__":
+    main()
